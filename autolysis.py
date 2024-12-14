@@ -291,8 +291,9 @@ def main(csv_file):
     print("Visualizations saved.")
 
     # Generate the story using the LLM with a dynamic prompt
+    context = "Provide any necessary context here"  # Replace with actual context if available
     prompt = f"Generate a nice and creative story from the analysis. Here are the details:\n\nSummary Statistics:\n{summary_stats}\n\nMissing Values:\n{missing_values}\n\nCorrelation Matrix:\n{corr_matrix}\n\nOutliers:\n{outliers}"
-    story = question_llm(prompt)
+    story = question_llm(prompt, context)
 
     # Create the README file with the analysis and the story
     readme_file = create_readme(summary_stats, missing_values, corr_matrix, outliers, output_dir)
