@@ -199,15 +199,11 @@ def question_llm(prompt, context):
     if not token:
         raise ValueError("AIPROXY_TOKEN environment variable not set")
 
-    # Prepare headers
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
+    openai.api_key = token
 
     # Prepare the body with the model and prompt
     data = {
-        "model": "gpt-4o-mini",  # Specific model for proxy
+        "model": "gpt-4",  # Update to the correct model name
         "messages": [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt}
