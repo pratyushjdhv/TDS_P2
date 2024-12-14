@@ -194,77 +194,43 @@ def create_readme(summary_stats, missing_values, corr_matrix, outliers, output_d
 
 # Function to generate a detailed story using the new OpenAI API through the proxy
 def question_llm(prompt, context):
-    print("Generating story using LLM...")  # Debugging line
-    try:
-        # Get the AIPROXY_TOKEN from the environment variable
-        token = os.environ["AIPROXY_TOKEN"]
+    import openai
+    token = os.getenv("AIPROXY_TOKEN")
+    if not token:
+        raise ValueError("AIPROXY_TOKEN environment variable not set")
 
-        # Set the custom API base URL for the proxy
-        api_url = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
+    # Prepare headers
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
 
-        # Construct the full prompt
-        full_prompt = f"""
-        Based on the following data analysis, please generate a creative and engaging story. The story should include multiple paragraphs, a clear structure with an introduction, body, and conclusion, and should feel like a well-rounded narrative.
+    # Prepare the body with the model and prompt
+    data = {
+        "model": "gpt-4o-mini",  # Specific model for proxy
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 1000,
+    }
 
-        Context:
-        {context}
-
-        Data Analysis Prompt:
-        {prompt}
-
-        The story should be elaborate and cover the following:
-        - An introduction to set the context.
-        - A detailed body that expands on the data points and explores their significance.
-        - A conclusion that wraps up the analysis and presents any potential outcomes or lessons.
-        - Use transitions to connect ideas and keep the narrative flowing smoothly.
-        - Format the story with clear paragraphs and structure.
-        """
-
-        # Prepare headers
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}"
-        }
-
-        # Prepare the body with the model and prompt
-        data = {
-            "model": "gpt-4o-mini",  # Specific model for proxy
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": full_prompt}
-            ],
-            "max_tokens": 1000,
-            "temperature": 0.7
-        }
-
-        # Send the POST request to the proxy
-        response = requests.post(api_url, headers=headers, data=json.dumps(data))
-
-        # Check for successful response
-        if response.status_code == 200:
-            # Extract the story from the response
-            story = response.json()['choices'][0]['message']['content'].strip()
-            print("Story generated.")  # Debugging line
-            return story
-        else:
-            print(f"Error with request: {response.status_code} - {response.text}")
-            return "Failed to generate story."
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Failed to generate story."
+    # Make the request to the LLM API
+    response = openai.ChatCompletion.create(**data)
+    story = response.choices[0].message['content']
+    return story
 
 
 
 # Main function that integrates all the steps
-def main(csv_file):
+def main(dataset_path):
     print("Starting the analysis...")  # Debugging line
 
     # Set the API token as an environment variable
   
     # Try reading the CSV file with 'ISO-8859-1' encoding to handle special characters
     try:
-        df = pd.read_csv(csv_file, encoding='ISO-8859-1')
+        df = pd.read_csv(dataset_path, encoding='ISO-8859-1')
         print("Dataset loaded successfully!")  # Debugging line
     except UnicodeDecodeError as e:
         print(f"Error reading file: {e}")
@@ -282,7 +248,9 @@ def main(csv_file):
     print("Outliers detected:")
     print(outliers)
 
-    output_dir = "."
+    # Create output directory based on the CSV file name
+    csv_filename = os.path.splitext(os.path.basename(dataset_path))[0]
+    output_dir = f"{csv_filename}"
     os.makedirs(output_dir, exist_ok=True)
 
     # Visualize the data and check output paths
@@ -296,32 +264,29 @@ def main(csv_file):
     story = question_llm(prompt, context)
 
     # Create the README file with the analysis and the story
-    readme_file = create_readme(summary_stats, missing_values, corr_matrix, outliers, output_dir)
-    if readme_file:
-        try:
-            with open(readme_file, 'w') as f:
-                f.write("# Project Analysis Report\n")
-                f.write("## Summary Statistics\n")
-                f.write(f"{summary_stats}\n\n")
-                f.write("## Missing Values\n")
-                f.write(f"{missing_values}\n\n")
-                f.write("## Correlation Matrix\n")
-                f.write(f"{corr_matrix}\n\n")
-                f.write("## Outliers\n")
-                f.write(f"{outliers}\n\n")
-                f.write("## Visualizations\n")
-                f.write(f"Heatmap: {heatmap_file}\n")
-                f.write(f"Outliers Plot: {outliers_file}\n")
-                f.write(f"Distribution Plot: {dist_plot_file}\n\n")
-                f.write("## Generated Story\n")
-                f.write(f"{story}\n")
-                f.write("## Conclusion\n")
-                f.write("This analysis provides insights into the dataset and highlights key patterns and anomalies.")
-            print("README file created successfully.")
-        except Exception as e:
-            print(f"Failed to create README file: {e}")
-    else:
-        print("Error generating the README.md file.")
+    readme_file = os.path.join(output_dir, "README.md")
+    try:
+        with open(readme_file, 'w') as f:
+            f.write("# Project Analysis Report\n")
+            f.write("## Summary Statistics\n")
+            f.write(f"{summary_stats}\n\n")
+            f.write("## Missing Values\n")
+            f.write(f"{missing_values}\n\n")
+            f.write("## Correlation Matrix\n")
+            f.write(f"{corr_matrix}\n\n")
+            f.write("## Outliers\n")
+            f.write(f"{outliers}\n\n")
+            f.write("## Visualizations\n")
+            f.write(f"Heatmap: {heatmap_file}\n")
+            f.write(f"Outliers Plot: {outliers_file}\n")
+            f.write(f"Distribution Plot: {dist_plot_file}\n\n")
+            f.write("## Generated Story\n")
+            f.write(f"{story}\n")
+            f.write("## Conclusion\n")
+            f.write("This analysis provides insights into the dataset and highlights key patterns and anomalies.")
+        print("README file created successfully.")
+    except Exception as e:
+        print(f"Failed to create README file: {e}")
 
 if __name__ == "__main__":
     import sys
