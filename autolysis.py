@@ -290,24 +290,35 @@ def main(csv_file):
 
     print("Visualizations saved.")
 
-    # Generate the story using the LLM
-    story = question_llm("Generate a nice and creative story from the analysis", 
-                         context=f"Dataset Analysis:\nSummary Statistics:\n{summary_stats}\n\nMissing Values:\n{missing_values}\n\nCorrelation Matrix:\n{corr_matrix}\n\nOutliers:\n{outliers}")
+    # Generate the story using the LLM with a dynamic prompt
+    prompt = f"Generate a nice and creative story from the analysis. Here are the details:\n\nSummary Statistics:\n{summary_stats}\n\nMissing Values:\n{missing_values}\n\nCorrelation Matrix:\n{corr_matrix}\n\nOutliers:\n{outliers}"
+    story = question_llm(prompt)
 
     # Create the README file with the analysis and the story
     readme_file = create_readme(summary_stats, missing_values, corr_matrix, outliers, output_dir)
     if readme_file:
         try:
-            # Append the story to the README.md file
-            with open(readme_file, 'a') as f:
-                f.write("## Story\n")
+            with open(readme_file, 'w') as f:
+                f.write("# Project Analysis Report\n")
+                f.write("## Summary Statistics\n")
+                f.write(f"{summary_stats}\n\n")
+                f.write("## Missing Values\n")
+                f.write(f"{missing_values}\n\n")
+                f.write("## Correlation Matrix\n")
+                f.write(f"{corr_matrix}\n\n")
+                f.write("## Outliers\n")
+                f.write(f"{outliers}\n\n")
+                f.write("## Visualizations\n")
+                f.write(f"Heatmap: {heatmap_file}\n")
+                f.write(f"Outliers Plot: {outliers_file}\n")
+                f.write(f"Distribution Plot: {dist_plot_file}\n\n")
+                f.write("## Generated Story\n")
                 f.write(f"{story}\n")
-
-            print(f"Analysis complete! Results saved in '{output_dir}' directory.")
-            print(f"README file: {readme_file}")
-            print(f"Visualizations: {heatmap_file}, {outliers_file}, {dist_plot_file}")
+                f.write("## Conclusion\n")
+                f.write("This analysis provides insights into the dataset and highlights key patterns and anomalies.")
+            print("README file created successfully.")
         except Exception as e:
-            print(f"Error appending story to README.md: {e}")
+            print(f"Failed to create README file: {e}")
     else:
         print("Error generating the README.md file.")
 
